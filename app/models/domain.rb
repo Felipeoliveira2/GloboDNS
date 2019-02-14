@@ -295,7 +295,7 @@ class Domain < ActiveRecord::Base
     str
   end
 
-  def to_zonefile(output, update_serial=true)
+  def to_zonefile(output, update_serial=true,bigger_serial)
     logger.warn "[WARN] called 'to_zonefile' on slave/forward domain (#{self.id})" and return if slave? || forward?
 
     output = File.open(output, 'w') if output.is_a?(String) || output.is_a?(Pathname)
@@ -308,7 +308,7 @@ class Domain < ActiveRecord::Base
     output_records(output, self.records, output_soa: !sibling, update_serial: update_serial) # only show this soa if the soa for the sibling hasn't been shown yet.
     if self.has_in_default_view? and self.view != DEFAULT_VIEW
       # if the zone is common to a view and the default view, the zone conf will be written only once and merge the records from the default view zone
-      output_records(output, self.records_zone_default, output_soa: !sibling, update_serial: update_serial)
+      output_records(output, self.records_zone_default, output_soa: !sibling, update_serial: update_serial,bigger_serial)
     end
   ensure
     output.close if output.is_a?(File)
@@ -365,13 +365,13 @@ class Domain < ActiveRecord::Base
   # Output to the given output stream
   # the records from the given colection.
   # Accepts, as options, output_soa: boolean
-  def output_records output, records, options={output_soa: true, update_serial: true}
+  def output_records output, records, options={output_soa: true, update_serial: true,bigger_serial}
     format = records_format records
     records.order("FIELD(type, #{GloboDns::Config::RECORD_ORDER.map{|x| "'#{x}'"}.join(', ')}), name ASC").each do |record|
       record.domain = self
       unless record.is_a?(SOA) && !options[:output_soa]
         record.update_serial(true) if (record.is_a?(SOA) and options[:update_serial])
-        record.to_zonefile(output, format)
+        record.to_zonefile(output, format,bigger_serial)
       end
     end
   end

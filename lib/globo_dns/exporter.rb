@@ -162,23 +162,27 @@ module GloboDns
         File.exist?(abs_views_dir) || FileUtils.mkdir(abs_views_dir)
 
         File.open(abs_views_file, 'w') do |file|
+          #Codigo novo
+          bigger_serial = serialCalc
+          #Codigo novo
           View.all.each do |view|
             file.puts view.to_bind9_conf(zones_root_dir, '', @slave) unless view.default?
             if @slave == true
-              export_domain_group(tmp_dir, zones_root_dir,    view.zones_file,    view.zones_dir, []                                     , true                                  , options.merge(view: view, type: ""))
-              export_domain_group(tmp_dir, zones_root_dir,  view.reverse_file,  view.reverse_dir, []                                     , true                                  , options.merge(view: view, type: ""))
-              export_domain_group(tmp_dir, zones_root_dir,   view.slaves_file,   view.slaves_dir, view.domains_master_or_reverse_or_slave, view.updated_since?(@last_commit_date), options.merge(view: view, type: "zones-slave-reverse"))
-              export_domain_group(tmp_dir, zones_root_dir, view.forwards_file, view.forwards_dir, view.domains.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 ))                   , true                                  , options.merge(view: view, type: "forwards"))
+              export_domain_group(tmp_dir, zones_root_dir,    view.zones_file,    view.zones_dir, []                                     , true                                  , bigger_serial, options.merge(view: view, type: ""))
+              export_domain_group(tmp_dir, zones_root_dir,  view.reverse_file,  view.reverse_dir, []                                     , true                                  , bigger_serial,options.merge(view: view, type: ""))
+              export_domain_group(tmp_dir, zones_root_dir,   view.slaves_file,   view.slaves_dir, view.domains_master_or_reverse_or_slave,bigger_serial, view.updated_since?(@last_commit_date),  options.merge(view: view, type: "zones-slave-reverse"))
+              export_domain_group(tmp_dir, zones_root_dir, view.forwards_file, view.forwards_dir, view.domains.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 ))                   , bigger_serial,true                                  ,options.merge(view: view, type: "forwards"))
             else
-              new_zones_noreverse = export_domain_group(tmp_dir , zones_root_dir , view.zones_file   , view.zones_dir    , view.domains.master                      , view.updated_since?(@last_commit_date), options.merge(:view => view, :type => "zones"))
-              new_zones_reverse = export_domain_group(tmp_dir , zones_root_dir , view.reverse_file  , view.reverse_dir  , view.domains._reverse                    , view.updated_since?(@last_commit_date), options.merge(:view => view, :type => "reverse"))
+              new_zones_noreverse = export_domain_group(tmp_dir , zones_root_dir , view.zones_file   , view.zones_dir    , view.domains.master                      , bigger_serial, view.updated_since?(@last_commit_date), options.merge(:view => view, :type => "zones"))
+              new_zones_reverse = export_domain_group(tmp_dir , zones_root_dir , view.reverse_file  , view.reverse_dir  , view.domains._reverse                    , bigger_serial, view.updated_since?(@last_commit_date), options.merge(:view => view, :type => "reverse"))
               if not new_zones_noreverse.empty? and not new_zones_reverse.empty?
                 # If there is a new zone in non-reverse or reverse, I need update ,.everything.
                 # If both have only changes, may I reload only changed zones
                 new_zones += new_zones_noreverse + new_zones_reverse
               end
-              export_domain_group(tmp_dir , zones_root_dir , view.slaves_file   , view.slaves_dir   , view.domains.slave                       , view.updated_since?(@last_commit_date), options.merge(:view => view, :type => "slave"))
-              export_domain_group(tmp_dir , zones_root_dir , view.forwards_file , view.forwards_dir , view.domains.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 ))                     , view.updated_since?(@last_commit_date), options.merge(:view => view, :type => "forwards"))
+
+              export_domain_group(tmp_dir , zones_root_dir , view.slaves_file   , view.slaves_dir   , view.domains.slave                       , bigger_serial, view.updated_since?(@last_commit_date), options.merge(:view => view, :type => "slave"))
+              export_domain_group(tmp_dir , zones_root_dir , view.forwards_file , view.forwards_dir , view.domains.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 ))                     ,bigger_serial, view.updated_since?(@last_commit_date),options.merge(:view => view, :type => "forwards"))
             end
           end
 
@@ -199,20 +203,20 @@ module GloboDns
         end
         # export each view-less domain group to a separate file
         if @slave == true
-          export_domain_group(tmp_dir, zones_root_dir, ZONES_FILE,    ZONES_DIR,    [], true, options)
-          export_domain_group(tmp_dir, zones_root_dir, REVERSE_FILE,  REVERSE_DIR,  [], true, options)
-          export_domain_group(tmp_dir, zones_root_dir, SLAVES_FILE,   SLAVES_DIR,   Domain.noview.master_or_reverse_or_slave, false, options)
-          export_domain_group(tmp_dir, zones_root_dir, FORWARDS_FILE, FORWARDS_DIR, Domain.noview.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 )), false, options)
+          export_domain_group(tmp_dir, zones_root_dir, ZONES_FILE,    ZONES_DIR,    [], bigger_serial,true,  options)
+          export_domain_group(tmp_dir, zones_root_dir, REVERSE_FILE,  REVERSE_DIR,  [], bigger_serial,true,  options)
+          export_domain_group(tmp_dir, zones_root_dir, SLAVES_FILE,   SLAVES_DIR,   Domain.noview.master_or_reverse_or_slave, bigger_serial,false, options)
+          export_domain_group(tmp_dir, zones_root_dir, FORWARDS_FILE, FORWARDS_DIR, Domain.noview.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 )), bigger_serial,false, options)
         else
-          new_zones_noreverse = export_domain_group(tmp_dir, zones_root_dir, ZONES_FILE,    ZONES_DIR,    Domain.noview.master)
-          new_zones_reverse   = export_domain_group(tmp_dir, zones_root_dir, REVERSE_FILE,  REVERSE_DIR,  Domain.noview._reverse)
+          new_zones_noreverse = export_domain_group(tmp_dir, zones_root_dir, ZONES_FILE,    ZONES_DIR,    Domain.noview.master, bigger_serial)
+          new_zones_reverse   = export_domain_group(tmp_dir, zones_root_dir, REVERSE_FILE,  REVERSE_DIR,  Domain.noview._reverse, bigger_serial)
           if not new_zones_noreverse.empty? and not new_zones_reverse.empty?
             # If there is a new zone in non-reverse or reverse, I need update everything.
             # If both have only changes, may I reload only changed zones
             new_zones += new_zones_noreverse + new_zones_reverse
           end
-          export_domain_group(tmp_dir, zones_root_dir, SLAVES_FILE,   SLAVES_DIR,   Domain.noview.slave)
-          export_domain_group(tmp_dir, zones_root_dir, FORWARDS_FILE, FORWARDS_DIR, Domain.noview.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 )))
+          export_domain_group(tmp_dir, zones_root_dir, SLAVES_FILE,   SLAVES_DIR,   Domain.noview.slave, bigger_serial)
+          export_domain_group(tmp_dir, zones_root_dir, FORWARDS_FILE, FORWARDS_DIR, Domain.noview.forward_export_to_ns(( options[:index].nil? ? 0 : options[:index] + 1 )), bigger_serial)
         end
       end
       # remove files that older than the export timestamp; these are the
@@ -261,6 +265,28 @@ module GloboDns
     end
 
     private
+
+    def serialCalc
+      bigger_serial = 0
+      View.all.each do |view|
+        view.domains.each do |d|
+          serial = d.records.where(type: "SOA").first.serial
+          if d.serial < serial
+            bigger_serial = serial
+          else
+            bigger_serial = d.serial
+          end
+        end
+      end
+
+      current_date = Time.now.strftime('%Y%m%d').to_i * 100
+      if bigger_serial >= current_date
+        bigger_serial += 1
+      else
+        bigger_serial = current_date
+      end
+      bigger_serial
+    end
 
     def export_named_conf(content, chroot_dir, zones_root_dir, named_conf_file)
       content.gsub!("\r\n", "\n")
@@ -375,7 +401,7 @@ module GloboDns
       end
     end
 
-    def export_domain_group(chroot_dir, zones_root_dir, file_name, dir_name, domains, export_all_domains = false, options = {})
+    def export_domain_group(chroot_dir, zones_root_dir, file_name, dir_name, domains, bigger_serial, export_all_domains = false, options = {})
       # abs stands for absolute
       abs_zones_root_dir          = File.join(chroot_dir, zones_root_dir)
       abs_file_name               = File.join(abs_zones_root_dir, file_name)
@@ -416,7 +442,7 @@ module GloboDns
             File.exist?(abs_zonefile_dir) or FileUtils.mkdir_p(abs_zonefile_dir)
             # Create/Update the zonefile itself
             abs_zonefile_path = File.join(abs_zones_root_dir, domain.zonefile_path)
-            domain.to_zonefile(abs_zonefile_path) unless domain.slave?
+            domain.to_zonefile(abs_zonefile_path,bigger_serial) unless domain.slave?
             #File.utime(@touch_timestamp, @touch_timestamp, File.join(abs_zonefile_path)) unless domain.slave? || domain.forward?
           end
         end
