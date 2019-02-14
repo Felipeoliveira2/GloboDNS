@@ -75,8 +75,10 @@ class SOA < Record
   #
   # updates the serial number to the next logical one. Format of the generated
   # serial is YYYYMMDDNN, where NN is the number of the change for the day
-  def update_serial(save = false,bigger_serial)
-    self.serial = bigger_serial
+  def update_serial(save = false,map_serial)
+
+    final_serial = plus_one map_serial[self.name]
+    self.serial= final_serial
 
     if save
       set_content
@@ -85,6 +87,17 @@ class SOA < Record
       end
     end
   end
+
+  def plus_one(serial)
+    current_date = Time.now.strftime('%Y%m%d').to_i * 100
+    if serial >= current_date
+      serial += 1
+    else
+      serial = current_date
+    end
+    serial
+  end
+
 
   def set_content
     self.content = SOA_FIELDS.map { |f| instance_variable_get("@#{f}").to_s  }.join(' ')

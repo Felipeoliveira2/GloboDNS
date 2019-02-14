@@ -304,11 +304,11 @@ class Domain < ActiveRecord::Base
     output.puts "$TTL    #{self.ttl}"
     output.puts
 
-    output_records(output, self.sibling.records, output_soa: true, update_serial: update_serial) if sibling
-    output_records(output, self.records, output_soa: !sibling, update_serial: update_serial) # only show this soa if the soa for the sibling hasn't been shown yet.
+    output_records(output, self.sibling.records,bigger_serial, output_soa: true, update_serial: update_serial) if sibling
+    output_records(output, self.records,bigger_serial, output_soa: !sibling, update_serial: update_serial ) # only show this soa if the soa for the sibling hasn't been shown yet.
     if self.has_in_default_view? and self.view != DEFAULT_VIEW
       # if the zone is common to a view and the default view, the zone conf will be written only once and merge the records from the default view zone
-      output_records(output, self.records_zone_default, output_soa: !sibling, update_serial: update_serial,bigger_serial)
+      output_records(output, self.records_zone_default,bigger_serial, output_soa: !sibling, update_serial: update_serial)
     end
   ensure
     output.close if output.is_a?(File)
@@ -365,7 +365,7 @@ class Domain < ActiveRecord::Base
   # Output to the given output stream
   # the records from the given colection.
   # Accepts, as options, output_soa: boolean
-  def output_records output, records, options={output_soa: true, update_serial: true,bigger_serial}
+  def output_records output, records, bigger_serial, options={output_soa: true, update_serial: true}
     format = records_format records
     records.order("FIELD(type, #{GloboDns::Config::RECORD_ORDER.map{|x| "'#{x}'"}.join(', ')}), name ASC").each do |record|
       record.domain = self
